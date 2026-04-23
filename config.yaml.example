@@ -1,0 +1,11 @@
+exchanges:
+  binance:
+    api_key: "填入你的 Binance API Key"
+    api_secret: "填入你的 Binance API Secret"
+    type: "future"
+    testnet: false
+  gateio:
+    api_key: "填入你的 Gate.io API Key"
+    api_secret: "填入你的 Gate.io API Secret"
+    type: "future"
+    testnet: false

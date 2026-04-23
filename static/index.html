@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Exchange Trader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen font-mono">
+    <div x-data="app()" x-init="init()" class="max-w-2xl mx-auto px-4 py-10">
+
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-white">Multi-Exchange Trader</h1>
+            <p class="text-gray-500 text-sm mt-1">市價單同步下單工具</p>
+        </div>
+
+        <!-- Init error -->
+        <div x-show="initError" x-cloak class="mb-4 bg-red-950/50 border border-red-800 rounded-xl px-4 py-3 text-sm text-red-300">
+            無法載入交易所清單：<span x-text="initError"></span>
+        </div>
+
+        <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 space-y-5">
+
+            <!-- Symbol -->
+            <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wider mb-2 block">交易對</label>
+                <input x-model="symbol" type="text" placeholder="BTC/USDT" spellcheck="false"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600
+                           focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+
+            <!-- Long / Short legs -->
+            <div class="grid grid-cols-2 gap-4">
+
+                <!-- Long leg -->
+                <div class="bg-green-950/30 border border-green-800/40 rounded-xl p-4">
+                    <div class="text-green-400 text-xs font-bold uppercase tracking-wider mb-3">做多 LONG</div>
+                    <div class="space-y-2">
+                        <template x-for="ex in availableExchanges" :key="'long-' + ex">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="radio" :value="ex" x-model="longExchange" name="longExchange"
+                                    class="w-4 h-4 accent-green-500 cursor-pointer">
+                                <span class="text-sm" x-text="displayName(ex)"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Short leg -->
+                <div class="bg-red-950/30 border border-red-800/40 rounded-xl p-4">
+                    <div class="text-red-400 text-xs font-bold uppercase tracking-wider mb-3">做空 SHORT</div>
+                    <div class="space-y-2">
+                        <template x-for="ex in availableExchanges" :key="'short-' + ex">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="radio" :value="ex" x-model="shortExchange" name="shortExchange"
+                                    class="w-4 h-4 accent-red-500 cursor-pointer">
+                                <span class="text-sm" x-text="displayName(ex)"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Amount -->
+            <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wider mb-2 block">數量</label>
+                <input x-model="amount" type="number" step="any" min="0" placeholder="0.001"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600
+                           focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+
+            <!-- Submit -->
+            <button @click="placeOrder()"
+                :disabled="loading || (!longExchange && !shortExchange) || !amount || !symbol"
+                class="w-full py-3 rounded-lg font-semibold text-white transition-colors
+                       bg-gradient-to-r from-green-700 to-red-700 hover:from-green-600 hover:to-red-600
+                       disabled:opacity-40 disabled:cursor-not-allowed">
+                <span x-show="!loading">同時下單 LONG / SHORT</span>
+                <span x-show="loading">送出中...</span>
+            </button>
+        </div>
+
+        <!-- Results -->
+        <div x-show="longResults.length > 0 || shortResults.length > 0" x-cloak class="mt-6">
+            <div class="grid gap-4"
+                :class="longResults.length > 0 && shortResults.length > 0 ? 'grid-cols-2' : 'grid-cols-1'">
+
+                <template x-if="longResults.length > 0">
+                    <div class="space-y-3">
+                        <h2 class="text-xs text-green-400 uppercase tracking-wider">做多結果</h2>
+                        <template x-for="r in longResults" :key="'lr-' + r.exchange">
+                            <div :class="r.success ? 'border-green-800 bg-green-950/50' : 'border-red-800 bg-red-950/50'"
+                                class="rounded-xl p-4 border">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-semibold text-sm" x-text="displayName(r.exchange)"></span>
+                                    <span :class="r.success ? 'text-green-400' : 'text-red-400'"
+                                        class="text-xs uppercase tracking-wider"
+                                        x-text="r.success ? '✓ 成功' : '✗ 失敗'"></span>
+                                </div>
+                                <div x-show="r.success" class="text-xs text-gray-400 space-y-1">
+                                    <div>ID: <span class="text-gray-200" x-text="r.order_id"></span></div>
+                                    <div x-show="r.price">價: <span class="text-gray-200" x-text="r.price"></span></div>
+                                    <div>量: <span class="text-gray-200" x-text="r.amount"></span></div>
+                                </div>
+                                <div x-show="!r.success" class="text-xs text-red-300 break-all" x-text="r.error"></div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <template x-if="shortResults.length > 0">
+                    <div class="space-y-3">
+                        <h2 class="text-xs text-red-400 uppercase tracking-wider">做空結果</h2>
+                        <template x-for="r in shortResults" :key="'sr-' + r.exchange">
+                            <div :class="r.success ? 'border-green-800 bg-green-950/50' : 'border-red-800 bg-red-950/50'"
+                                class="rounded-xl p-4 border">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-semibold text-sm" x-text="displayName(r.exchange)"></span>
+                                    <span :class="r.success ? 'text-green-400' : 'text-red-400'"
+                                        class="text-xs uppercase tracking-wider"
+                                        x-text="r.success ? '✓ 成功' : '✗ 失敗'"></span>
+                                </div>
+                                <div x-show="r.success" class="text-xs text-gray-400 space-y-1">
+                                    <div>ID: <span class="text-gray-200" x-text="r.order_id"></span></div>
+                                    <div x-show="r.price">價: <span class="text-gray-200" x-text="r.price"></span></div>
+                                    <div>量: <span class="text-gray-200" x-text="r.amount"></span></div>
+                                </div>
+                                <div x-show="!r.success" class="text-xs text-red-300 break-all" x-text="r.error"></div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const DISPLAY_NAMES = { binance: 'Binance', gateio: 'Gate.io' };
+
+        function app() {
+            return {
+                availableExchanges: [],
+                longExchange: '',
+                shortExchange: '',
+                symbol: 'BTC/USDT',
+                amount: '',
+                loading: false,
+                longResults: [],
+                shortResults: [],
+                initError: '',
+
+                displayName(id) {
+                    return DISPLAY_NAMES[id] || id;
+                },
+
+                async init() {
+                    try {
+                        const res = await fetch('/api/exchanges');
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        const data = await res.json();
+                        this.availableExchanges = data.exchanges;
+                        if (data.exchanges.length >= 2) {
+                            this.longExchange = data.exchanges[0];
+                            this.shortExchange = data.exchanges[1];
+                        } else if (data.exchanges.length === 1) {
+                            this.longExchange = data.exchanges[0];
+                            this.shortExchange = data.exchanges[0];
+                        }
+                    } catch (e) {
+                        this.initError = e.message;
+                    }
+                },
+
+                async placeOrder() {
+                    if (!this.symbol) return;
+                    const qty = parseFloat(this.amount);
+                    if (isNaN(qty) || qty <= 0) return;
+                    if (!this.longExchange && !this.shortExchange) return;
+
+                    this.loading = true;
+                    this.longResults = [];
+                    this.shortResults = [];
+
+                    const calls = [];
+
+                    if (this.longExchange) {
+                        calls.push(
+                            fetch('/api/orders', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    exchanges: [this.longExchange],
+                                    symbol: this.symbol,
+                                    side: 'buy',
+                                    amount: qty,
+                                }),
+                            })
+                            .then(async r => {
+                                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                                return r.json();
+                            })
+                            .then(data => { this.longResults = data.results; })
+                            .catch(e => {
+                                this.longResults = [{ exchange: this.longExchange, success: false, error: e.message }];
+                            })
+                        );
+                    }
+
+                    if (this.shortExchange) {
+                        calls.push(
+                            fetch('/api/orders', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    exchanges: [this.shortExchange],
+                                    symbol: this.symbol,
+                                    side: 'sell',
+                                    amount: qty,
+                                }),
+                            })
+                            .then(async r => {
+                                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                                return r.json();
+                            })
+                            .then(data => { this.shortResults = data.results; })
+                            .catch(e => {
+                                this.shortResults = [{ exchange: this.shortExchange, success: false, error: e.message }];
+                            })
+                        );
+                    }
+
+                    await Promise.all(calls);
+                    this.loading = false;
+                },
+            };
+        }
+    </script>
+</body>
+</html>

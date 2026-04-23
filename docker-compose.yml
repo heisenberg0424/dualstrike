@@ -1,0 +1,9 @@
+services:
+  trader:
+    build:
+      context: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    restart: unless-stopped
