@@ -12,21 +12,25 @@ Simultaneously place long and short futures orders across multiple exchanges wit
 
 ## Quick Start
 
-**You only need two files:** `docker-compose.yml` and `config.yaml`
+**You only need two files:** `Dockerfile` and `config.yaml`
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 2. Copy `config.yaml.example` → `config.yaml` and fill in your API keys
-3. Run:
+3. Build the image (only once):
    ```
-   docker compose up -d
+   docker build -t dualstrike .
    ```
-4. Open `http://localhost:8000`
+4. Run:
+   ```
+   docker run -d -p 8000:8000 -v ./config.yaml:/app/config.yaml:ro --name dualstrike dualstrike
+   ```
+5. Open `http://localhost:8000`
 
 ## Update
 
-When a new version is available, just restart:
+When a new version is available, restart the container:
 ```
-docker compose restart
+docker restart dualstrike
 ```
 
 ## Configuration
