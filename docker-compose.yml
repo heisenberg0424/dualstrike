@@ -1,7 +1,6 @@
 services:
   trader:
-    build:
-      context: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    build: https://github.com/heisenberg0424/dualstrike.git
     ports:
       - "8000:8000"
     volumes:

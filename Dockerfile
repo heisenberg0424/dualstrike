@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/YOUR_USERNAME/YOUR_REPO /app
+RUN git clone https://github.com/heisenberg0424/dualstrike.git
 
 WORKDIR /app
 
