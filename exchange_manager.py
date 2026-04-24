@@ -42,10 +42,13 @@ class ExchangeManager:
 
     async def load_all_markets(self):
         for name, exchange in self.exchanges.items():
-            markets = await exchange.load_markets()
-            with open(f"markets_{name}.txt", "w") as mf:
-                mf.write("\n".join(markets.keys()))
-            print(f"[{name}] markets saved to markets_{name}.txt")
+            try:
+                markets = await exchange.load_markets()
+                with open(f"markets_{name}.txt", "w") as mf:
+                    mf.write("\n".join(markets.keys()))
+                print(f"[{name}] markets saved to markets_{name}.txt")
+            except Exception as e:
+                print(f"[{name}] failed to load markets: {e}")
 
     def get_available_exchanges(self) -> list:
         return list(self.exchanges.keys())
