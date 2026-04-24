@@ -7,6 +7,9 @@ import math
 EXCHANGE_CLASSES = {
     "binance": ccxt.binance,
     "gateio": ccxt.gateio,
+    "bybit": ccxt.bybit,
+    "bitget": ccxt.bitget,
+    "bingx": ccxt.bingx,
 }
 
 
@@ -26,9 +29,9 @@ class ExchangeManager:
             exchange = cls({
                 "apiKey": settings["api_key"],
                 "secret": settings["api_secret"],
+                "password": settings.get("passwd", ""),
                 'options': {
                     'defaultType': settings["type"],
-                    # 'createMarketBuyOrderRequiresPrice': False
                 }
             })
             if settings.get("testnet"):
@@ -61,6 +64,11 @@ class ExchangeManager:
             if exchange_name == "gateio":
                 market = exchange.market(symbol+":USDT")
                 order = await exchange.create_order(symbol+":USDT", 'market', side, math.floor(amount / market.get('contractSize')))
+            elif exchange_name == "bingx":
+                position_side = "LONG" if side == "buy" else "SHORT"
+                order = await exchange.create_order(symbol+":USDT", 'market', side, amount, params={"positionSide": position_side})
+            elif exchange_name in ['bitget', 'bybit']:
+                order = await exchange.create_order(symbol+":USDT", 'market', side, amount)
             else:
                 order = await exchange.create_order(symbol, 'market', side, amount)
             # print(f"[{exchange_name}] raw order response:\n{json.dumps(order, indent=2, default=str)}")
