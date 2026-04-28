@@ -10,6 +10,7 @@ EXCHANGE_CLASSES = {
     "bybit": ccxt.bybit,
     "bitget": ccxt.bitget,
     "bingx": ccxt.bingx,
+    "okx": ccxt.okx,
 }
 
 
@@ -31,7 +32,7 @@ class ExchangeManager:
                 "secret": settings["api_secret"],
                 "password": settings.get("passwd", ""),
                 'options': {
-                    'defaultType': settings["type"],
+                    'defaultType': settings.get("type", ""),
                 }
             })
             if settings.get("testnet"):
@@ -61,9 +62,10 @@ class ExchangeManager:
         if not exchange:
             return {"exchange": exchange_name, "success": False, "error": "Exchange not configured"}
         try:
-            if exchange_name == "gateio":
+            if exchange_name in ["gateio", "okx"]:
+                exchange.verbose = True
                 market = exchange.market(symbol+":USDT")
-                order = await exchange.create_order(symbol+":USDT", 'market', side, math.floor(amount / market.get('contractSize')))
+                order = await exchange.create_order(symbol+":USDT", 'market', side, amount / market.get('contractSize'))
             elif exchange_name == "bingx":
                 position_side = "LONG" if side == "buy" else "SHORT"
                 order = await exchange.create_order(symbol+":USDT", 'market', side, amount, params={"positionSide": position_side})
