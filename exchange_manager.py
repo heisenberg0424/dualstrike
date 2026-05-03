@@ -66,10 +66,7 @@ class ExchangeManager:
                 exchange.verbose = True
                 market = exchange.market(symbol+":USDT")
                 order = await exchange.create_order(symbol+":USDT", 'market', side, amount / market.get('contractSize'))
-            elif exchange_name == "bingx":
-                position_side = "LONG" if side == "buy" else "SHORT"
-                order = await exchange.create_order(symbol+":USDT", 'market', side, amount, params={"positionSide": position_side})
-            elif exchange_name in ['bitget', 'bybit']:
+            elif exchange_name in ['bitget', 'bybit', "bingx"]:
                 order = await exchange.create_order(symbol+":USDT", 'market', side, amount)
             else:
                 order = await exchange.create_order(symbol, 'market', side, amount)
