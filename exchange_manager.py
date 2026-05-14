@@ -11,6 +11,8 @@ EXCHANGE_CLASSES = {
     "bitget": ccxt.bitget,
     "bingx": ccxt.bingx,
     "okx": ccxt.okx,
+    "aster": ccxt.aster,
+    "hyperliquid": ccxt.hyperliquid
 }
 
 
@@ -27,16 +29,26 @@ class ExchangeManager:
             cls = EXCHANGE_CLASSES.get(name)
             if not cls:
                 continue
-            exchange = cls({
-                "apiKey": settings["api_key"],
-                "secret": settings["api_secret"],
-                "password": settings.get("passwd", ""),
+            if name in ['aster', 'hyperliquid']:
+                exchange = cls({
+                "privateKey": settings["privateKey"],
+                "walletAddress": settings["walletAddress"],
                 'options': {
+                    'signerAddress': settings["walletAddress"],
                     'defaultType': settings.get("type", ""),
                 }
             })
+            else:
+                exchange = cls({
+                    "apiKey": settings["api_key"],
+                    "secret": settings["api_secret"],
+                    "password": settings.get("passwd", ""),
+                    'options': {
+                        'defaultType': settings.get("type", ""),
+                    }
+                })
             if settings.get("testnet"):
-                if 'binance'in name:
+                if name in ['binance', 'aster']:
                     exchange.enable_demo_trading(True)
                 else:
                     exchange.set_sandbox_mode(True)
@@ -66,8 +78,13 @@ class ExchangeManager:
                 exchange.verbose = True
                 market = exchange.market(symbol+":USDT")
                 order = await exchange.create_order(symbol+":USDT", 'market', side, amount / market.get('contractSize'))
-            elif exchange_name in ['bitget', 'bybit', "bingx"]:
+            elif exchange_name in ['bitget', 'bybit', "bingx", "aster"]:
                 order = await exchange.create_order(symbol+":USDT", 'market', side, amount)
+            elif exchange_name in ['hyperliquid']:
+                symbol = (symbol+":USDT").replace("USDT", "USDC")
+                markets = await exchange.load_markets()
+                price = markets[symbol]["info"]["midPx"]
+                order = await exchange.create_order(symbol, 'market', side, amount, price=price)
             else:
                 order = await exchange.create_order(symbol, 'market', side, amount)
             # print(f"[{exchange_name}] raw order response:\n{json.dumps(order, indent=2, default=str)}")
