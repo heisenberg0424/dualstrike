@@ -81,10 +81,13 @@ class ExchangeManager:
             elif exchange_name in ['bitget', 'bybit', "bingx", "aster"]:
                 order = await exchange.create_order(symbol+":USDT", 'market', side, amount)
             elif exchange_name in ['hyperliquid']:
-                symbol = (symbol+":USDT").replace("USDT", "USDC")
-                markets = await exchange.load_markets()
-                price = markets[symbol]["info"]["midPx"]
-                order = await exchange.create_order(symbol, 'market', side, amount, price=price)
+                hl_symbol = (symbol + ":USDT").replace("USDT", "USDC")
+                if hl_symbol not in exchange.markets:
+                    hl_symbol = next((k for k in exchange.markets if hl_symbol in k), None)
+                    if hl_symbol is None:
+                        raise Exception(f"{symbol} not found in Hyperliquid markets")
+                price = await exchange.fetch_ticker(hl_symbol)
+                order = await exchange.create_order(hl_symbol, 'market', side, amount, price=price['last'])
             else:
                 order = await exchange.create_order(symbol, 'market', side, amount)
             # print(f"[{exchange_name}] raw order response:\n{json.dumps(order, indent=2, default=str)}")
